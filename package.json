@@ -1,7 +1,6 @@
 {
   "name": "kush-temp-mail-bot",
   "version": "1.0.0",
-  "description": "Telegram Temp Mail Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
