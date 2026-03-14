@@ -1,7 +1,7 @@
 const TelegramBot = require("node-telegram-bot-api");
 const express = require("express");
 
-const TOKEN = "YOUR_BOT_TOKEN";
+const TOKEN = "8564779220:AAGQrUv0wfDpFnYy6zljpyvjrdZ_n8AMk_A";
 const DOMAIN = "kushxmail.shop";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
