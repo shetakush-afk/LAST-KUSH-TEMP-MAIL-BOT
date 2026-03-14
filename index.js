@@ -1,56 +1,50 @@
 const TelegramBot = require("node-telegram-bot-api");
 const express = require("express");
 
-const TOKEN = "8564779220:AAGQrUv0wfDpFnYy6zljpyvjrdZ_n8AMk_A"; // BotFather token
-const DOMAIN = "kushxmail.shop"; // your domain
+const TOKEN = "8665461427:AAGmvUTAvoV8Jw0iHlRL1eKC8T4u7Gwd0L0";
+const DOMAIN = "kushxmail.shop";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
+// webhook conflict fix
+bot.deleteWebHook();
+
 const app = express();
-app.use(express.json());
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 let emails = {};
 let userEmails = {};
 
-
-// homepage
 app.get("/", (req, res) => {
   res.send("KUSH TEMP MAIL BOT RUNNING 🚀");
 });
 
-
-// random email generator
+// random email
 function randomName() {
   return Math.random().toString(36).substring(2, 10);
 }
 
-
 // start command
 bot.onText(/\/start/, (msg) => {
 
-  const text = `
-✨ KUSH TEMP MAIL BOT ✨
+  bot.sendMessage(
+    msg.chat.id,
+`✨ KUSH TEMP MAIL BOT
 
-Commands:
+/generate - create email
+/id - show emails
 
-/generate - create temp email
-/id - show your emails
-/delete email - delete email
+Domain: @${DOMAIN}`
+  );
 
-Domain: @${DOMAIN}
-
-Owner: @KUSHxTRUSTED
-`;
-
-  bot.sendMessage(msg.chat.id, text);
 });
-
 
 // generate email
 bot.onText(/\/generate/, (msg) => {
 
-  let name = randomName();
-  let email = `${name}@${DOMAIN}`;
+  let email = randomName() + "@" + DOMAIN;
 
   emails[email] = msg.chat.id;
 
@@ -60,9 +54,9 @@ bot.onText(/\/generate/, (msg) => {
 
   userEmails[msg.chat.id].push(email);
 
-  bot.sendMessage(msg.chat.id, `✅ Email Generated\n\n${email}`);
-});
+  bot.sendMessage(msg.chat.id, `✅ Email Created\n\n${email}`);
 
+});
 
 // show emails
 bot.onText(/\/id/, (msg) => {
@@ -74,59 +68,59 @@ bot.onText(/\/id/, (msg) => {
     return;
   }
 
-  let text = "📂 Your Emails\n\n";
+  bot.sendMessage(msg.chat.id, "📂 Your Emails\n\n" + list.join("\n"));
 
-  list.forEach(e => {
-    text += e + "\n";
-  });
-
-  bot.sendMessage(msg.chat.id, text);
 });
 
+// receive mail
+app.post("/mail", async (req, res) => {
 
-// delete email
-bot.onText(/\/delete (.+)/, (msg, match) => {
+  try {
 
-  let email = match[1];
+    const { to, subject, text } = req.body;
 
-  if (emails[email]) {
+    if (emails[to]) {
 
-    delete emails[email];
+      let content = text || "";
 
-    let arr = userEmails[msg.chat.id];
-    userEmails[msg.chat.id] = arr.filter(e => e !== email);
+      // telegram message limit fix
+      if (content.length > 4000) {
+        content = content.substring(0, 4000) + "\n\n...message truncated";
+      }
 
-    bot.sendMessage(msg.chat.id, "🗑 Email deleted");
+      await bot.sendMessage(
+        emails[to],
+`📩 New Mail
 
-  } else {
+To: ${to}
+Subject: ${subject || "No subject"}
 
-    bot.sendMessage(msg.chat.id, "❌ Email not found");
+${content}`
+      );
+
+    }
+
+    res.send("ok");
+
+  } catch (err) {
+
+    console.log("MAIL ERROR:", err);
+    res.send("error");
 
   }
 
 });
 
-
-// receive mail from cloudflare
-app.post("/mail", (req, res) => {
-
-  const { to, subject, text } = req.body;
-
-  if (emails[to]) {
-
-    bot.sendMessage(
-      emails[to],
-      `📩 New Mail\n\nTo: ${to}\n\nSubject: ${subject}\n\n${text}`
-    );
-
-  }
-
-  res.send("ok");
+// crash protection
+process.on("uncaughtException", err => {
+  console.log("ERROR:", err);
 });
 
+process.on("unhandledRejection", err => {
+  console.log("REJECTION:", err);
+});
 
-// railway port
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
