@@ -5,8 +5,6 @@ const TOKEN = "8665461427:AAGmvUTAvoV8Jw0iHlRL1eKC8T4u7Gwd0L0";
 const DOMAIN = "kushxmail.shop";
 
 const bot = new TelegramBot(TOKEN, { polling: true });
-
-// webhook conflict fix
 bot.deleteWebHook();
 
 const app = express();
@@ -26,7 +24,7 @@ function randomName() {
   return Math.random().toString(36).substring(2, 10);
 }
 
-// start command
+// start
 bot.onText(/\/start/, (msg) => {
 
   bot.sendMessage(
@@ -35,6 +33,88 @@ bot.onText(/\/start/, (msg) => {
 
 /generate - create email
 /id - show emails
+
+Domain: @${DOMAIN}`
+  );
+
+});
+
+// generate email
+bot.onText(/\/generate/, (msg) => {
+
+  let email = randomName() + "@" + DOMAIN;
+
+  emails[email] = msg.chat.id;
+
+  if (!userEmails[msg.chat.id]) {
+    userEmails[msg.chat.id] = [];
+  }
+
+  userEmails[msg.chat.id].push(email);
+
+  bot.sendMessage(msg.chat.id, `✅ Email Created\n\n${email}`);
+
+});
+
+// show emails
+bot.onText(/\/id/, (msg) => {
+
+  let list = userEmails[msg.chat.id];
+
+  if (!list || list.length === 0) {
+    bot.sendMessage(msg.chat.id, "❌ No emails created");
+    return;
+  }
+
+  bot.sendMessage(msg.chat.id, "📂 Your Emails\n\n" + list.join("\n"));
+
+});
+
+// receive mail
+app.post("/mail", async (req, res) => {
+
+  try {
+
+    const { to, subject, text } = req.body;
+
+    console.log("MAIL RECEIVED:", to);
+
+    if (emails[to]) {
+
+      let content = text || "";
+
+      if (content.length > 4000) {
+        content = content.substring(0, 4000) + "\n\n...message truncated";
+      }
+
+      await bot.sendMessage(
+        emails[to],
+`📩 New Mail
+
+To: ${to}
+Subject: ${subject || "No subject"}
+
+${content}`
+      );
+
+    }
+
+    res.send("ok");
+
+  } catch (err) {
+
+    console.log("MAIL ERROR:", err);
+    res.send("error");
+
+  }
+
+});
+
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});/id - show emails
 
 Domain: @${DOMAIN}`
   );
